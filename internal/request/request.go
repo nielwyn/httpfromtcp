@@ -31,6 +31,41 @@ type RequestLine struct {
 const crlf = "\r\n"
 const bufferSize = 8
 
+func RequestFromReader(reader io.Reader) (*Request, error) {
+	buf := make([]byte, bufferSize)
+	req := &Request{state: requestStateInitialized}
+	readToIndex := 0
+
+	for req.state != requestStateDone {
+		numBytesRead, err := reader.Read(buf[readToIndex:])
+		readToIndex += numBytesRead
+		if readToIndex == cap(buf) {
+			newBuf := make([]byte, cap(buf)*2)
+			copy(newBuf, buf[:readToIndex])
+			buf = newBuf
+		}
+
+		numBytesParsed, parseErr := req.parse(buf[:readToIndex])
+		if parseErr != nil {
+			return nil, parseErr
+		}
+
+		// Shifts the unconsumed bytes to the front of the buffer
+		copy(buf, buf[numBytesParsed:readToIndex])
+		readToIndex -= numBytesParsed
+
+		if err == io.EOF {
+			req.state = requestStateDone
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return req, nil
+}
+
 func (r *Request) parse(data []byte) (int, error) {
 	switch r.state {
 	case requestStateInitialized:
@@ -85,39 +120,4 @@ func parseRequestLine(bytes []byte) (*RequestLine, int, error) {
 		RequestTarget: requestLineParts[1],
 		HttpVersion:   version,
 	}, numBytesParsed, nil
-}
-
-func RequestFromReader(reader io.Reader) (*Request, error) {
-	buf := make([]byte, bufferSize)
-	req := &Request{state: requestStateInitialized}
-	readToIndex := 0
-
-	for req.state != requestStateDone {
-		numBytesRead, err := reader.Read(buf[readToIndex:])
-		readToIndex += numBytesRead
-		if readToIndex == cap(buf) {
-			newBuf := make([]byte, cap(buf)*2)
-			copy(newBuf, buf[:readToIndex])
-			buf = newBuf
-		}
-
-		numBytesParsed, parseErr := req.parse(buf[:readToIndex])
-		if parseErr != nil {
-			return nil, parseErr
-		}
-
-		// Shifts the unconsumed bytes to the front of the buffer
-		copy(buf, buf[numBytesParsed:readToIndex])
-		readToIndex -= numBytesParsed
-
-		if err == io.EOF {
-			req.state = requestStateDone
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return req, nil
 }
