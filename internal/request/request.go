@@ -94,30 +94,30 @@ func parseRequestLine(bytes []byte) (*RequestLine, int, error) {
 	}
 
 	numBytesParsed := crlfIndex + len(crlf)
-	requestLineParts := strings.Split(str[:crlfIndex], " ")
+	parts := strings.Split(str[:crlfIndex], " ")
 
-	if len(requestLineParts) != 3 {
+	if len(parts) != 3 {
 		return nil, numBytesParsed, fmt.Errorf("invalid request line")
 	}
 
 	validMethods := map[string]bool{"GET": true, "POST": true, "PUT": true, "DELETE": true, "PATCH": true, "HEAD": true, "OPTIONS": true}
-	if !validMethods[requestLineParts[0]] {
-		return nil, numBytesParsed, fmt.Errorf("invalid method: %s", requestLineParts[0])
+	if !validMethods[parts[0]] {
+		return nil, numBytesParsed, fmt.Errorf("invalid method: %s", parts[0])
 	}
 
-	if !strings.HasPrefix(requestLineParts[2], "HTTP/") {
-		return nil, numBytesParsed, fmt.Errorf("invalid HTTP version: %s", requestLineParts[2])
+	if !strings.HasPrefix(parts[2], "HTTP/") {
+		return nil, numBytesParsed, fmt.Errorf("invalid HTTP version: %s", parts[2])
 	}
 
-	version := strings.TrimPrefix(requestLineParts[2], "HTTP/")
+	version := strings.TrimPrefix(parts[2], "HTTP/")
 	validVersions := map[string]bool{"1.1": true}
 	if !validVersions[version] {
-		return nil, numBytesParsed, fmt.Errorf("invalid HTTP version: %s", requestLineParts[2])
+		return nil, numBytesParsed, fmt.Errorf("invalid HTTP version: %s", parts[2])
 	}
 
 	return &RequestLine{
-		Method:        requestLineParts[0],
-		RequestTarget: requestLineParts[1],
+		Method:        parts[0],
+		RequestTarget: parts[1],
 		HttpVersion:   version,
 	}, numBytesParsed, nil
 }
