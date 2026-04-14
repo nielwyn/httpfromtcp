@@ -25,18 +25,15 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	numBytesParsed := crlfIndex + len(crlf)
 
 	parts := strings.SplitN(str[:crlfIndex], ":", 2)
-
 	if len(parts) < 2 {
 		return 0, false, fmt.Errorf("invalid header: missing colon")
 	}
 
-	key := parts[0]
+	key, value := parts[0], strings.TrimSpace(parts[1])
 	if !isValidFieldName(key) {
 		return 0, false, fmt.Errorf("invalid header: field-name %q contains invalid characters", key)
 	}
-
 	key = strings.ToLower(key)
-	value := strings.TrimSpace(parts[1])
 
 	if existing, ok := h[key]; ok {
 		h[key] = existing + ", " + value
