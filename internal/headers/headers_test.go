@@ -51,6 +51,23 @@ func TestHeaders(t *testing.T) {
 	assert.Equal(t, "", headers["Content-Type"])
 	assert.False(t, done)
 
+	// Valid duplicate header key — values are combined with comma
+	headers = NewHeaders()
+	data = []byte("Accept: text/html\r\nAccept: application/json\r\nAccept: application/xml\r\n\r\n")
+	offset := 0
+	n, done, err = headers.Parse(data[offset:])
+	require.NoError(t, err)
+	assert.False(t, done)
+	offset += n
+	n, done, err = headers.Parse(data[offset:])
+	require.NoError(t, err)
+	assert.False(t, done)
+	offset += n
+	n, done, err = headers.Parse(data[offset:])
+	require.NoError(t, err)
+	assert.False(t, done)
+	assert.Equal(t, "text/html, application/json, application/xml", headers["accept"])
+
 	// Valid done
 	headers = NewHeaders()
 	data = []byte("\r\n")
