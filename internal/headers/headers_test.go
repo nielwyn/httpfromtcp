@@ -14,7 +14,7 @@ func TestHeaders(t *testing.T) {
 	n, done, err := headers.Parse(data)
 	require.NoError(t, err)
 	require.NotNil(t, headers)
-	assert.Equal(t, "localhost:42069", headers["Host"])
+	assert.Equal(t, "localhost:42069", headers["host"])
 	assert.Equal(t, 23, n)
 	assert.False(t, done)
 
@@ -24,8 +24,8 @@ func TestHeaders(t *testing.T) {
 	n, done, err = headers.Parse(data)
 	require.NoError(t, err)
 	require.NotNil(t, headers)
-	assert.Equal(t, "localhost:42069", headers["Host"])
-	assert.Equal(t, 23, n)
+	assert.Equal(t, "localhost:42069", headers["host"])
+	assert.Equal(t, 32, n)
 	assert.False(t, done)
 
 	// Valid 2 headers with existing headers
@@ -37,9 +37,18 @@ func TestHeaders(t *testing.T) {
 	assert.False(t, done)
 	n, done, err = headers.Parse(data[n:])
 	require.NoError(t, err)
-	assert.Equal(t, "localhost:42069", headers["Host"])
-	assert.Equal(t, "text/html, application/json", headers["Accept"])
-	assert.Equal(t, 41, n)
+	assert.Equal(t, "localhost:42069", headers["host"])
+	assert.Equal(t, "text/html, application/json", headers["accept"])
+	assert.Equal(t, 37, n)
+	assert.False(t, done)
+
+	// Valid header with uppercase key — map key must be lowercased
+	headers = NewHeaders()
+	data = []byte("Content-Type: application/json\r\n\r\n")
+	n, done, err = headers.Parse(data)
+	require.NoError(t, err)
+	assert.Equal(t, "application/json", headers["content-type"])
+	assert.Equal(t, "", headers["Content-Type"])
 	assert.False(t, done)
 
 	// Valid done
@@ -61,6 +70,22 @@ func TestHeaders(t *testing.T) {
 	// Invalid spacing header
 	headers = NewHeaders()
 	data = []byte("       Host : localhost:42069       \r\n\r\n")
+	n, done, err = headers.Parse(data)
+	require.Error(t, err)
+	assert.Equal(t, 0, n)
+	assert.False(t, done)
+
+	// Invalid character in field name (@)
+	headers = NewHeaders()
+	data = []byte("H@st: localhost:42069\r\n\r\n")
+	n, done, err = headers.Parse(data)
+	require.Error(t, err)
+	assert.Equal(t, 0, n)
+	assert.False(t, done)
+
+	// Invalid non-ASCII character in field name (©)
+	headers = NewHeaders()
+	data = []byte("H©st: localhost:42069\r\n\r\n")
 	n, done, err = headers.Parse(data)
 	require.Error(t, err)
 	assert.Equal(t, 0, n)

@@ -30,11 +30,25 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return 0, false, fmt.Errorf("invalid header: missing colon")
 	}
 
-	if strings.Contains(parts[0], " ") {
-		return 0, false, fmt.Errorf("invalid header: field-name %q contains invalid characters", parts[0])
+	key := parts[0]
+	if !isValidFieldName(key) {
+		return 0, false, fmt.Errorf("invalid header: field-name %q contains invalid characters", key)
 	}
 
-	h[parts[0]] = strings.TrimSpace(parts[1])
+	h[strings.ToLower(key)] = strings.TrimSpace(parts[1])
 
 	return numBytesParsed, false, nil
+}
+
+func isValidFieldName(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+			strings.ContainsRune("!#$%&'*+-.^_`|~", c)) {
+			return false
+		}
+	}
+	return true
 }
