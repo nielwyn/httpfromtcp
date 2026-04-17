@@ -107,7 +107,6 @@ func TestHeaders(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, 0, n)
 	assert.False(t, done)
-
 }
 
 func NewHeaders() Headers {

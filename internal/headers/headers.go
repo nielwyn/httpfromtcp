@@ -9,6 +9,10 @@ type Headers map[string]string
 
 const crlf = "\r\n"
 
+func (h Headers) Get(key string) string {
+	return h[strings.ToLower(key)]
+}
+
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	str := string(data)
 

@@ -30,5 +30,9 @@ func main() {
 		req.RequestLine.RequestTarget,
 		req.RequestLine.HttpVersion,
 	)
-
+	fmt.Printf("Headers:\n")
+	for k, v := range req.Headers {
+		fmt.Printf("- %s: %s\n", k, v)
+	}
+	fmt.Printf("Body:\n%s", req.Body)
 }

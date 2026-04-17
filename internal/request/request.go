@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"httpfromtcp/internal/headers"
 	"io"
+	"strconv"
 	"strings"
 )
 
@@ -19,8 +20,8 @@ const (
 type Request struct {
 	RequestLine RequestLine
 	Headers     headers.Headers
-	// Body        []byte
-	state requestState
+	Body        []byte
+	state       requestState
 }
 
 type RequestLine struct {
@@ -107,10 +108,27 @@ func (r *Request) parseSingle(data []byte) (int, error) {
 		}
 		// End of headers
 		if done {
-			r.state = requestStateDone
+			r.state = requestStateParsingBody
 		}
 
 		return n, nil
+	case requestStateParsingBody:
+		contentLength, err := strconv.Atoi(r.Headers.Get("content-length"))
+		if err != nil {
+			r.state = requestStateDone
+			return 0, nil
+		}
+
+		r.Body = append(r.Body, data...)
+
+		if len(r.Body) > contentLength {
+			return 0, fmt.Errorf("body length %d exceeds content-length %d", len(r.Body), contentLength)
+		}
+		if len(r.Body) == contentLength {
+			r.state = requestStateDone
+		}
+
+		return len(data), nil
 	case requestStateDone:
 		return 0, fmt.Errorf("error: trying to read data in a done state")
 	default:
