@@ -10,9 +10,9 @@ import (
 type StatusCode int
 
 const (
-	StatusOK                  = 200
-	StatusBadRequest          = 400
-	StatusInternalServerError = 500
+	StatusCodeOK                  = 200
+	StatusCodeBadRequest          = 400
+	StatusCodeInternalServerError = 500
 )
 
 func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
@@ -29,14 +29,6 @@ func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
 	return nil
 }
 
-func GetDefaultHeaders(contentLen int) headers.Headers {
-	return headers.Headers{
-		"Content-Length": strconv.Itoa(contentLen),
-		"Connection":     "close",
-		"Content-Type":   "text/plain",
-	}
-}
-
 func WriteHeaders(w io.Writer, headers headers.Headers) error {
 	for k, v := range headers {
 		_, err := fmt.Fprintf(w, "%s: %s\r\n", k, v)
@@ -45,4 +37,12 @@ func WriteHeaders(w io.Writer, headers headers.Headers) error {
 		}
 	}
 	return nil
+}
+
+func GetDefaultHeaders(contentLen int) headers.Headers {
+	return headers.Headers{
+		"Content-Length": strconv.Itoa(contentLen),
+		"Connection":     "close",
+		"Content-Type":   "text/plain",
+	}
 }
