@@ -13,6 +13,10 @@ func (h Headers) Get(key string) string {
 	return h[strings.ToLower(key)]
 }
 
+func (h Headers) Override(key string, value string) {
+	h[strings.ToLower(key)] = value
+}
+
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	str := string(data)
 
