@@ -9,12 +9,25 @@ type Headers map[string]string
 
 const crlf = "\r\n"
 
-func (h Headers) Get(key string) string {
-	return h[strings.ToLower(key)]
+func (h Headers) Get(key string) (string, bool) {
+	v, ok := h[strings.ToLower(key)]
+	return v, ok
 }
 
-func (h Headers) Override(key string, value string) {
+func (h Headers) Set(key, value string) {
+	if v, ok := h[strings.ToLower(key)]; ok {
+		h[key] = fmt.Sprintf("%s,%s", v, value)
+	} else {
+		h[strings.ToLower(key)] = value
+	}
+}
+
+func (h Headers) Override(key, value string) {
 	h[strings.ToLower(key)] = value
+}
+
+func (h Headers) Delete(key string) {
+	delete(h, strings.ToLower(key))
 }
 
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
