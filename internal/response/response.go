@@ -13,6 +13,8 @@ const (
 	writerStateStatusLine writerState = iota
 	writerStateHeaders
 	writerStateBody
+	writerStateChunkedBody
+	writerStateDone
 )
 
 type StatusCode int
@@ -46,14 +48,16 @@ func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 	if err != nil {
 		return err
 	}
-
 	w.writerState = writerStateHeaders
 	return nil
 }
 
 func (w *Writer) WriteHeaders(headers headers.Headers) error {
-	if w.writerState != writerStateHeaders {
+	if w.writerState == writerStateStatusLine {
 		return fmt.Errorf("cannot write headers: status line not written yet")
+	}
+	if w.writerState != writerStateHeaders {
+		return fmt.Errorf("cannot write headers: already written")
 	}
 
 	for k, v := range headers {
@@ -63,17 +67,28 @@ func (w *Writer) WriteHeaders(headers headers.Headers) error {
 		}
 	}
 
+	w.writer.Write([]byte("\r\n"))
 	w.writerState = writerStateBody
 	return nil
 }
 
 func (w *Writer) WriteBody(b []byte) (int, error) {
-	if w.writerState != writerStateBody {
+	if w.writerState == writerStateStatusLine {
+		return 0, fmt.Errorf("cannot write body: status line not written yet")
+	}
+	if w.writerState == writerStateHeaders {
 		return 0, fmt.Errorf("cannot write body: headers not written yet")
 	}
+	if w.writerState != writerStateBody {
+		return 0, fmt.Errorf("cannot write body: already written")
+	}
 
-	w.writer.Write([]byte("\r\n"))
-	return w.writer.Write(b)
+	n, err := w.writer.Write(b)
+	if err != nil {
+		return n, err
+	}
+	w.writerState = writerStateDone
+	return n, nil
 }
 
 func GetDefaultHeaders(contentLen int) headers.Headers {
@@ -82,4 +97,38 @@ func GetDefaultHeaders(contentLen int) headers.Headers {
 		"connection":     "close",
 		"content-type":   "text/plain",
 	}
+}
+
+func (w *Writer) WriteChunkedBody(b []byte) (int, error) {
+	if w.writerState != writerStateBody && w.writerState != writerStateChunkedBody {
+		return 0, fmt.Errorf("cannot write chunked body: invalid state")
+	}
+
+	_, err := fmt.Fprintf(w.writer, "%x\r\n", len(b))
+	if err != nil {
+		return 0, err
+	}
+	n, err := w.writer.Write(b)
+	if err != nil {
+		return n, err
+	}
+	_, err = w.writer.Write([]byte("\r\n"))
+	if err != nil {
+		return n, err
+	}
+	w.writerState = writerStateChunkedBody
+	return n, nil
+}
+
+func (w *Writer) WriteChunkedBodyDone() (int, error) {
+	if w.writerState != writerStateChunkedBody {
+		return 0, fmt.Errorf("cannot write chunked body done: invalid state")
+	}
+
+	n, err := w.writer.Write([]byte("0\r\n\r\n"))
+	if err != nil {
+		return n, err
+	}
+	w.writerState = writerStateDone
+	return n, nil
 }

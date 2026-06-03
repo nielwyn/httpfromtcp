@@ -5,8 +5,10 @@ import (
 	"httpfromtcp/internal/response"
 	"httpfromtcp/internal/server"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 )
 
@@ -49,6 +51,39 @@ func main() {
 	server, err := server.Serve(
 		port,
 		func(w *response.Writer, req *request.Request) {
+			requestTarget := req.RequestLine.RequestTarget
+			after, found := strings.CutPrefix(requestTarget, "/httpbin/")
+			if found {
+				resp, err := http.Get("https://httpbin.org/" + after)
+				if err != nil {
+					w.WriteStatusLine(response.StatusCodeInternalServerError)
+					w.WriteHeaders(response.GetDefaultHeaders(0))
+					w.WriteBody([]byte(err.Error()))
+					return
+				}
+				defer resp.Body.Close()
+
+				w.WriteStatusLine(response.StatusCode(resp.StatusCode))
+				h := response.GetDefaultHeaders(0)
+				h.Override("transfer-encoding", "chunked")
+				h.Delete("content-length")
+				w.WriteHeaders(h)
+
+				buf := make([]byte, 1024)
+				for {
+					n, err := resp.Body.Read(buf)
+					if n > 0 {
+						w.WriteChunkedBody(buf[:n])
+					}
+					if err != nil {
+						break
+					}
+				}
+
+				w.WriteChunkedBodyDone()
+				return
+			}
+
 			if req.RequestLine.RequestTarget == "/yourproblem" {
 				w.WriteStatusLine(response.StatusCodeBadRequest)
 				h := response.GetDefaultHeaders(len(body400))

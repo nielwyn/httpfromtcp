@@ -113,7 +113,12 @@ func (r *Request) parseSingle(data []byte) (int, error) {
 
 		return n, nil
 	case requestStateParsingBody:
-		contentLength, err := strconv.Atoi(r.Headers.Get("content-length"))
+		contentLengthStr, ok := r.Headers.Get("content-length")
+		if !ok {
+			r.state = requestStateDone
+			return 0, nil
+		}
+		contentLength, err := strconv.Atoi(contentLengthStr)
 		if err != nil {
 			r.state = requestStateDone
 			return 0, nil
@@ -150,7 +155,15 @@ func parseRequestLine(bytes []byte) (*RequestLine, int, error) {
 		return nil, numBytesParsed, fmt.Errorf("invalid request line")
 	}
 
-	validMethods := map[string]bool{"GET": true, "POST": true, "PUT": true, "DELETE": true, "PATCH": true, "HEAD": true, "OPTIONS": true}
+	validMethods := map[string]bool{
+		"GET":     true,
+		"POST":    true,
+		"PUT":     true,
+		"DELETE":  true,
+		"PATCH":   true,
+		"HEAD":    true,
+		"OPTIONS": true,
+	}
 	if !validMethods[parts[0]] {
 		return nil, numBytesParsed, fmt.Errorf("invalid method: %s", parts[0])
 	}
