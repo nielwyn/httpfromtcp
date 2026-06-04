@@ -35,6 +35,14 @@ func NewWriter(w io.Writer) *Writer {
 	return &Writer{writer: w}
 }
 
+func GetDefaultHeaders(contentLen int) headers.Headers {
+	return headers.Headers{
+		"content-length": strconv.Itoa(contentLen),
+		"connection":     "close",
+		"content-type":   "text/plain",
+	}
+}
+
 func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 	if w.writerState != writerStateStatusLine {
 		return fmt.Errorf("cannot write status line: already written")
@@ -90,14 +98,6 @@ func (w *Writer) WriteBody(b []byte) (int, error) {
 	}
 	w.writerState = writerStateDone
 	return n, nil
-}
-
-func GetDefaultHeaders(contentLen int) headers.Headers {
-	return headers.Headers{
-		"content-length": strconv.Itoa(contentLen),
-		"connection":     "close",
-		"content-type":   "text/plain",
-	}
 }
 
 func (w *Writer) WriteChunkedBody(b []byte) (int, error) {
