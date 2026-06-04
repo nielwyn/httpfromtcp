@@ -15,10 +15,11 @@ func (h Headers) Get(key string) (string, bool) {
 }
 
 func (h Headers) Set(key, value string) {
-	if v, ok := h[strings.ToLower(key)]; ok {
-		h[key] = fmt.Sprintf("%s,%s", v, value)
+	lowerKey := strings.ToLower(key)
+	if v, ok := h[lowerKey]; ok {
+		h[lowerKey] = fmt.Sprintf("%s, %s", v, value)
 	} else {
-		h[strings.ToLower(key)] = value
+		h[lowerKey] = value
 	}
 }
 

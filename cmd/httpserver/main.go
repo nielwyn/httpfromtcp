@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
+	"fmt"
+	"httpfromtcp/internal/headers"
 	"httpfromtcp/internal/request"
 	"httpfromtcp/internal/response"
 	"httpfromtcp/internal/server"
@@ -8,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 )
@@ -64,16 +68,23 @@ func main() {
 				defer resp.Body.Close()
 
 				w.WriteStatusLine(response.StatusCode(resp.StatusCode))
-				h := response.GetDefaultHeaders(0)
+
+				h := headers.Headers{}
+				for k, v := range resp.Header {
+					h[strings.ToLower(k)] = strings.Join(v, ", ")
+				}
 				h.Override("transfer-encoding", "chunked")
+				h.Set("trailer", "X-Content-SHA256, X-Content-Length")
 				h.Delete("content-length")
 				w.WriteHeaders(h)
 
+				fullBody := []byte{}
 				buf := make([]byte, 1024)
 				for {
 					n, err := resp.Body.Read(buf)
 					if n > 0 {
 						w.WriteChunkedBody(buf[:n])
+						fullBody = append(fullBody, buf[:n]...)
 					}
 					if err != nil {
 						break
@@ -81,10 +92,20 @@ func main() {
 				}
 
 				w.WriteChunkedBodyDone()
+
+				trailers := headers.Headers{}
+				for k, v := range resp.Trailer {
+					trailers[strings.ToLower(k)] = strings.Join(v, ", ")
+				}
+				hash := fmt.Sprintf("%x", sha256.Sum256(fullBody))
+				trailers.Set("X-Content-SHA256", hash)
+				trailers.Set("X-Content-Length", strconv.Itoa(len(fullBody)))
+				w.WriteTrailers(trailers)
+
 				return
 			}
 
-			if req.RequestLine.RequestTarget == "/yourproblem" {
+			if requestTarget == "/yourproblem" {
 				w.WriteStatusLine(response.StatusCodeBadRequest)
 				h := response.GetDefaultHeaders(len(body400))
 				h.Override("content-type", "text/html")
@@ -92,7 +113,7 @@ func main() {
 				w.WriteBody(body400)
 				return
 			}
-			if req.RequestLine.RequestTarget == "/myproblem" {
+			if requestTarget == "/myproblem" {
 				w.WriteStatusLine(response.StatusCodeInternalServerError)
 				h := response.GetDefaultHeaders(len(body500))
 				h.Override("content-type", "text/html")
@@ -100,7 +121,7 @@ func main() {
 				w.WriteBody(body500)
 				return
 			}
-			if req.RequestLine.RequestTarget == "/" {
+			if requestTarget == "/" {
 				w.WriteStatusLine(response.StatusCodeOK)
 				h := response.GetDefaultHeaders(len(body200))
 				h.Override("content-type", "text/html")

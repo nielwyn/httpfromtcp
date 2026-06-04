@@ -14,6 +14,7 @@ const (
 	writerStateHeaders
 	writerStateBody
 	writerStateChunkedBody
+	writerStateTrailers
 	writerStateDone
 )
 
@@ -125,10 +126,30 @@ func (w *Writer) WriteChunkedBodyDone() (int, error) {
 		return 0, fmt.Errorf("cannot write chunked body done: invalid state")
 	}
 
-	n, err := w.writer.Write([]byte("0\r\n\r\n"))
+	n, err := w.writer.Write([]byte("0\r\n"))
 	if err != nil {
 		return n, err
 	}
-	w.writerState = writerStateDone
+	w.writerState = writerStateTrailers
 	return n, nil
+}
+
+func (w *Writer) WriteTrailers(h headers.Headers) error {
+	if w.writerState != writerStateTrailers {
+		return fmt.Errorf("cannot write trailers: invalid state")
+	}
+
+	for k, v := range h {
+		_, err := fmt.Fprintf(w.writer, "%s: %s\r\n", k, v)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err := w.writer.Write([]byte("\r\n"))
+	if err != nil {
+		return err
+	}
+	w.writerState = writerStateDone
+	return nil
 }
