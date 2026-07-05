@@ -4,9 +4,6 @@ import (
 	"io"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type chunkReader struct {
@@ -22,11 +19,21 @@ func TestRequestLineParse(t *testing.T) {
 		numBytesPerRead: 3,
 	}
 	r, err := RequestFromReader(reader)
-	require.NoError(t, err)
-	require.NotNil(t, r)
-	assert.Equal(t, "GET", r.RequestLine.Method)
-	assert.Equal(t, "/", r.RequestLine.RequestTarget)
-	assert.Equal(t, "1.1", r.RequestLine.HttpVersion)
+	if err != nil {
+		t.Fatalf("RequestFromReader error: %v", err)
+	}
+	if r == nil {
+		t.Fatal("request is nil")
+	}
+	if r.RequestLine.Method != "GET" {
+		t.Errorf("Method = %q, want %q", r.RequestLine.Method, "GET")
+	}
+	if r.RequestLine.RequestTarget != "/" {
+		t.Errorf("RequestTarget = %q, want %q", r.RequestLine.RequestTarget, "/")
+	}
+	if r.RequestLine.HttpVersion != "1.1" {
+		t.Errorf("HttpVersion = %q, want %q", r.RequestLine.HttpVersion, "1.1")
+	}
 
 	// Valid GET with path and chunked reader (1 byte per read)
 	reader = &chunkReader{
@@ -34,47 +41,93 @@ func TestRequestLineParse(t *testing.T) {
 		numBytesPerRead: 1,
 	}
 	r, err = RequestFromReader(reader)
-	require.NoError(t, err)
-	require.NotNil(t, r)
-	assert.Equal(t, "GET", r.RequestLine.Method)
-	assert.Equal(t, "/pomegranate", r.RequestLine.RequestTarget)
-	assert.Equal(t, "1.1", r.RequestLine.HttpVersion)
+	if err != nil {
+		t.Fatalf("RequestFromReader error: %v", err)
+	}
+	if r == nil {
+		t.Fatal("request is nil")
+	}
+	if r.RequestLine.Method != "GET" {
+		t.Errorf("Method = %q, want %q", r.RequestLine.Method, "GET")
+	}
+	if r.RequestLine.RequestTarget != "/pomegranate" {
+		t.Errorf("RequestTarget = %q, want %q", r.RequestLine.RequestTarget, "/pomegranate")
+	}
+	if r.RequestLine.HttpVersion != "1.1" {
+		t.Errorf("HttpVersion = %q, want %q", r.RequestLine.HttpVersion, "1.1")
+	}
 
 	// Valid GET request line
 	r, err = RequestFromReader(strings.NewReader("GET / HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
-	require.NoError(t, err)
-	require.NotNil(t, r)
-	assert.Equal(t, "GET", r.RequestLine.Method)
-	assert.Equal(t, "/", r.RequestLine.RequestTarget)
-	assert.Equal(t, "1.1", r.RequestLine.HttpVersion)
+	if err != nil {
+		t.Fatalf("RequestFromReader error: %v", err)
+	}
+	if r == nil {
+		t.Fatal("request is nil")
+	}
+	if r.RequestLine.Method != "GET" {
+		t.Errorf("Method = %q, want %q", r.RequestLine.Method, "GET")
+	}
+	if r.RequestLine.RequestTarget != "/" {
+		t.Errorf("RequestTarget = %q, want %q", r.RequestLine.RequestTarget, "/")
+	}
+	if r.RequestLine.HttpVersion != "1.1" {
+		t.Errorf("HttpVersion = %q, want %q", r.RequestLine.HttpVersion, "1.1")
+	}
 
 	// Valid POST request line with path
 	r, err = RequestFromReader(strings.NewReader("POST /pomegranate HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
-	require.NoError(t, err)
-	require.NotNil(t, r)
-	assert.Equal(t, "POST", r.RequestLine.Method)
-	assert.Equal(t, "/pomegranate", r.RequestLine.RequestTarget)
-	assert.Equal(t, "1.1", r.RequestLine.HttpVersion)
+	if err != nil {
+		t.Fatalf("RequestFromReader error: %v", err)
+	}
+	if r == nil {
+		t.Fatal("request is nil")
+	}
+	if r.RequestLine.Method != "POST" {
+		t.Errorf("Method = %q, want %q", r.RequestLine.Method, "POST")
+	}
+	if r.RequestLine.RequestTarget != "/pomegranate" {
+		t.Errorf("RequestTarget = %q, want %q", r.RequestLine.RequestTarget, "/pomegranate")
+	}
+	if r.RequestLine.HttpVersion != "1.1" {
+		t.Errorf("HttpVersion = %q, want %q", r.RequestLine.HttpVersion, "1.1")
+	}
 
 	// Invalid request line — method and target out of order
 	r, err = RequestFromReader(strings.NewReader("/ GET HTTP/1.1\r\nHost: localhost:42069\r\n\r\n"))
-	require.Error(t, err)
-	require.Nil(t, r)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if r != nil {
+		t.Errorf("request = %v, want nil", r)
+	}
 
 	// Invalid request line — unsupported HTTP version
 	r, err = RequestFromReader(strings.NewReader("GET / HTTP/2.9\r\nHost: localhost:42069\r\n\r\n"))
-	require.Error(t, err)
-	require.Nil(t, r)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if r != nil {
+		t.Errorf("request = %v, want nil", r)
+	}
 
 	// Invalid request line — missing method (target as first token)
 	r, err = RequestFromReader(strings.NewReader("/pomegranate HTTP/1.1\r\nHost: localhost:42069\r\n\r\n"))
-	require.Error(t, err)
-	require.Nil(t, r)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if r != nil {
+		t.Errorf("request = %v, want nil", r)
+	}
 
 	// Invalid request line — missing target
 	r, err = RequestFromReader(strings.NewReader("GET HTTP/1.1\r\nHost: localhost:42069\r\n\r\n"))
-	require.Error(t, err)
-	require.Nil(t, r)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if r != nil {
+		t.Errorf("request = %v, want nil", r)
+	}
 }
 
 func TestHeadersParse(t *testing.T) {
@@ -84,34 +137,66 @@ func TestHeadersParse(t *testing.T) {
 		numBytesPerRead: 3,
 	}
 	r, err := RequestFromReader(reader)
-	require.NoError(t, err)
-	require.NotNil(t, r)
-	assert.Equal(t, "localhost:42069", r.Headers["host"])
-	assert.Equal(t, "curl/7.81.0", r.Headers["user-agent"])
-	assert.Equal(t, "*/*", r.Headers["accept"])
+	if err != nil {
+		t.Fatalf("RequestFromReader error: %v", err)
+	}
+	if r == nil {
+		t.Fatal("request is nil")
+	}
+	if r.Headers["host"] != "localhost:42069" {
+		t.Errorf("Headers[\"host\"] = %q, want %q", r.Headers["host"], "localhost:42069")
+	}
+	if r.Headers["user-agent"] != "curl/7.81.0" {
+		t.Errorf("Headers[\"user-agent\"] = %q, want %q", r.Headers["user-agent"], "curl/7.81.0")
+	}
+	if r.Headers["accept"] != "*/*" {
+		t.Errorf("Headers[\"accept\"] = %q, want %q", r.Headers["accept"], "*/*")
+	}
 
 	// Valid empty headers — no headers between request line and body
 	r, err = RequestFromReader(strings.NewReader("GET / HTTP/1.1\r\n\r\n"))
-	require.NoError(t, err)
-	require.NotNil(t, r)
-	assert.Empty(t, r.Headers)
+	if err != nil {
+		t.Fatalf("RequestFromReader error: %v", err)
+	}
+	if r == nil {
+		t.Fatal("request is nil")
+	}
+	if len(r.Headers) != 0 {
+		t.Errorf("Headers = %v, want empty", r.Headers)
+	}
 
 	// Valid duplicate headers — values combined with comma
 	r, err = RequestFromReader(strings.NewReader("GET / HTTP/1.1\r\nAccept: text/html\r\nAccept: application/json\r\n\r\n"))
-	require.NoError(t, err)
-	require.NotNil(t, r)
-	assert.Equal(t, "text/html, application/json", r.Headers["accept"])
+	if err != nil {
+		t.Fatalf("RequestFromReader error: %v", err)
+	}
+	if r == nil {
+		t.Fatal("request is nil")
+	}
+	if want := "text/html, application/json"; r.Headers["accept"] != want {
+		t.Errorf("Headers[\"accept\"] = %q, want %q", r.Headers["accept"], want)
+	}
 
 	// Valid case insensitive headers — keys stored as lowercase
 	r, err = RequestFromReader(strings.NewReader("GET / HTTP/1.1\r\nContent-Type: application/json\r\n\r\n"))
-	require.NoError(t, err)
-	require.NotNil(t, r)
-	assert.Equal(t, "application/json", r.Headers["content-type"])
-	assert.Equal(t, "", r.Headers["Content-Type"])
+	if err != nil {
+		t.Fatalf("RequestFromReader error: %v", err)
+	}
+	if r == nil {
+		t.Fatal("request is nil")
+	}
+	if r.Headers["content-type"] != "application/json" {
+		t.Errorf("Headers[\"content-type\"] = %q, want %q", r.Headers["content-type"], "application/json")
+	}
+	if r.Headers["Content-Type"] != "" {
+		t.Errorf("Headers[\"Content-Type\"] = %q, want empty", r.Headers["Content-Type"])
+	}
 
 	// Invalid missing end of headers — no final CRLF
 	r, err = RequestFromReader(strings.NewReader("GET / HTTP/1.1\r\nHost: localhost:42069\r\n"))
-	require.Error(t, err)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
 
 	// Invalid header — missing colon separator
 	reader = &chunkReader{
@@ -119,7 +204,9 @@ func TestHeadersParse(t *testing.T) {
 		numBytesPerRead: 3,
 	}
 	r, err = RequestFromReader(reader)
-	require.Error(t, err)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
 }
 
 func TestBodyParse(t *testing.T) {
@@ -133,9 +220,15 @@ func TestBodyParse(t *testing.T) {
 		numBytesPerRead: 3,
 	}
 	r, err := RequestFromReader(reader)
-	require.NoError(t, err)
-	require.NotNil(t, r)
-	assert.Equal(t, "hello world!\n", string(r.Body))
+	if err != nil {
+		t.Fatalf("RequestFromReader error: %v", err)
+	}
+	if r == nil {
+		t.Fatal("request is nil")
+	}
+	if got, want := string(r.Body), "hello world!\n"; got != want {
+		t.Errorf("Body = %q, want %q", got, want)
+	}
 
 	// Valid empty body with zero content-length
 	reader = &chunkReader{
@@ -146,8 +239,12 @@ func TestBodyParse(t *testing.T) {
 		numBytesPerRead: 3,
 	}
 	r, err = RequestFromReader(reader)
-	require.NoError(t, err)
-	require.NotNil(t, r)
+	if err != nil {
+		t.Fatalf("RequestFromReader error: %v", err)
+	}
+	if r == nil {
+		t.Fatal("request is nil")
+	}
 
 	// Valid empty body with no content-length header
 	reader = &chunkReader{
@@ -157,8 +254,12 @@ func TestBodyParse(t *testing.T) {
 		numBytesPerRead: 3,
 	}
 	r, err = RequestFromReader(reader)
-	require.NoError(t, err)
-	require.NotNil(t, r)
+	if err != nil {
+		t.Fatalf("RequestFromReader error: %v", err)
+	}
+	if r == nil {
+		t.Fatal("request is nil")
+	}
 
 	// Valid body without content-length header — body ignored
 	reader = &chunkReader{
@@ -169,8 +270,12 @@ func TestBodyParse(t *testing.T) {
 		numBytesPerRead: 3,
 	}
 	r, err = RequestFromReader(reader)
-	require.NoError(t, err)
-	require.NotNil(t, r)
+	if err != nil {
+		t.Fatalf("RequestFromReader error: %v", err)
+	}
+	if r == nil {
+		t.Fatal("request is nil")
+	}
 
 	// Invalid body shorter than content-length
 	reader = &chunkReader{
@@ -182,7 +287,9 @@ func TestBodyParse(t *testing.T) {
 		numBytesPerRead: 3,
 	}
 	r, err = RequestFromReader(reader)
-	require.Error(t, err)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
 }
 
 // Read reads up to len(p) or numBytesPerRead bytes from the string per call
