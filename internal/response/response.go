@@ -48,12 +48,13 @@ func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 		return fmt.Errorf("cannot write status line: already written")
 	}
 
-	statusLine := map[StatusCode]string{
-		200: "HTTP/1.1 200 OK",
-		400: "HTTP/1.1 400 Bad Request",
-		500: "HTTP/1.1 500 Internal Server Error",
+	reasonPhrases := map[StatusCode]string{
+		StatusCodeOK:                  "OK",
+		StatusCodeBadRequest:          "Bad Request",
+		StatusCodeInternalServerError: "Internal Server Error",
 	}
-	_, err := fmt.Fprintf(w.writer, "%s\r\n", statusLine[statusCode])
+	// The reason phrase is optional per RFC 9112, so unknown codes get an empty one
+	_, err := fmt.Fprintf(w.writer, "HTTP/1.1 %d %s\r\n", statusCode, reasonPhrases[statusCode])
 	if err != nil {
 		return err
 	}

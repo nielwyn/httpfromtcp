@@ -39,6 +39,15 @@ func TestWriteStatusLine(t *testing.T) {
 	if got, want := buf.String(), "HTTP/1.1 500 Internal Server Error\r\n"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
+
+	w, buf = newWriter()
+	err = w.WriteStatusLine(StatusCode(503))
+	if err != nil {
+		t.Fatalf("WriteStatusLine(503) error: %v", err)
+	}
+	if got, want := buf.String(), "HTTP/1.1 503 \r\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
 }
 
 func TestWriteStatusLineInvalidState(t *testing.T) {
