@@ -28,10 +28,10 @@ func main() {
 			switch requestTarget {
 			case "/video":
 				handleVideo(w)
-			case "/yourproblem":
-				handleYourProblem(w)
-			case "/myproblem":
-				handleMyProblem(w)
+			case "/badrequest":
+				handleBadRequest(w)
+			case "/error":
+				handleServerError(w)
 			case "/":
 				handleRoot(w)
 			}

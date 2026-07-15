@@ -9,8 +9,8 @@ var body200 = []byte(`<html>
       <title>200 OK</title>
     </head>
     <body>
-      <h1>Success!</h1>
-      <p>Your request was an absolute banger.</p>
+      <h1>Success</h1>
+      <p>The server parsed and handled this request successfully.</p>
     </body>
   </html>
   `)
@@ -21,7 +21,7 @@ var body400 = []byte(`<html>
     </head>
     <body>
       <h1>Bad Request</h1>
-      <p>Your request honestly kinda sucked.</p>
+      <p>The request could not be understood by the server.</p>
     </body>
   </html>
   `)
@@ -32,7 +32,7 @@ var body500 = []byte(`<html>
     </head>
     <body>
       <h1>Internal Server Error</h1>
-      <p>Okay, you know what? This one is on me.</p>
+      <p>The server encountered an unexpected condition.</p>
     </body>
   </html>
   `)
@@ -45,7 +45,7 @@ func handleRoot(w *response.Writer) {
 	w.WriteBody(body200)
 }
 
-func handleYourProblem(w *response.Writer) {
+func handleBadRequest(w *response.Writer) {
 	h := response.GetDefaultHeaders(len(body400))
 	h.Override("content-type", "text/html")
 	w.WriteStatusLine(response.StatusCodeBadRequest)
@@ -53,7 +53,7 @@ func handleYourProblem(w *response.Writer) {
 	w.WriteBody(body400)
 }
 
-func handleMyProblem(w *response.Writer) {
+func handleServerError(w *response.Writer) {
 	h := response.GetDefaultHeaders(len(body500))
 	h.Override("content-type", "text/html")
 	w.WriteStatusLine(response.StatusCodeInternalServerError)
